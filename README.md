@@ -1,4 +1,5 @@
 # OrangeHRM Playwright Automation
+[![Playwright E2E Tests](https://github.com/Mohanad49/orangehrm-playwright/actions/workflows/playwright.yml/badge.svg)](https://github.com/Mohanad49/orangehrm-playwright/actions/workflows/playwright.yml)
 
 An end-to-end test automation framework built with [Playwright](https://playwright.dev/) and TypeScript, designed to test the [OrangeHRM Open Source Demo](https://opensource-demo.orangehrmlive.com). 
 
