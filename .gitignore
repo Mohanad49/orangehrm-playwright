@@ -1,0 +1,9 @@
+node_modules/
+dist/
+playwright-report/
+allure-results/
+allure-report/
+allure-history/
+test-results/
+blob-report/
+.DS_Store

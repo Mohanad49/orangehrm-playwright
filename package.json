@@ -1,0 +1,24 @@
+{
+  "name": "orangehrm-playwright",
+  "version": "1.0.0",
+  "description": "Playwright E2E test suite for OrangeHRM — enterprise HR management system",
+  "scripts": {
+    "test": "npx playwright test",
+    "test:auth": "npx playwright test tests/auth/",
+    "test:employees": "npx playwright test tests/employees/",
+    "test:leave": "npx playwright test tests/leave/",
+    "test:recruitment": "npx playwright test tests/recruitment/",
+    "test:headed": "npx playwright test --headed",
+    "report": "npx playwright show-report"
+  },
+  "keywords": ["playwright", "e2e", "testing", "orangehrm", "qa"],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@types/node": "^25.9.1",
+    "allure-playwright": "^3.9.0",
+    "typescript": "^6.0.3"
+  }
+}
