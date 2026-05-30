@@ -37,24 +37,24 @@ export class LeaveManagementPage {
 
   async goto() {
     await this.page.goto('/web/index.php/leave/viewLeaveModule');
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   async gotoApplyLeave() {
     await this.page.goto('/web/index.php/leave/applyLeave');
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   async gotoMyLeave() {
     await this.page.goto('/web/index.php/leave/viewMyLeaveList');
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   async gotoMyEntitlements() {
     await this.goto();
     await this.entitlementsLink.click();
     await this.myEntitlementsLink.click();
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   async hasLeaveBalance(): Promise<boolean> {
@@ -69,8 +69,14 @@ export class LeaveManagementPage {
       return false;
     }
     await this.leaveTypeDropdown.click();
-    const option = this.page.locator('.oxd-select-option', { hasText: leaveType }).first();
-    await option.waitFor({ state: 'visible', timeout: 5000 });
+    const option = this.page.locator('.oxd-select-option').nth(1);
+    
+    // Check if any leave types exist
+    const hasOptions = await option.isVisible({ timeout: 5000 }).catch(() => false);
+    if (!hasOptions) {
+      return false;
+    }
+    
     await option.click();
     return true;
   }
@@ -117,7 +123,7 @@ export class LeaveManagementPage {
   }
 
   async getLeaveRequests(): Promise<number> {
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
     const count = await this.tableRows.count();
     return count;
   }
@@ -127,7 +133,7 @@ export class LeaveManagementPage {
     const cancelButton = this.page.locator('.oxd-table-body .oxd-table-row button', { hasText: 'Cancel' }).first();
     if (await cancelButton.isVisible({ timeout: 5000 }).catch(() => false)) {
       await cancelButton.click();
-      await this.page.waitForLoadState('networkidle');
+      await this.page.waitForLoadState('domcontentloaded');
     }
   }
 

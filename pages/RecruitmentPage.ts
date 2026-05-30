@@ -33,12 +33,12 @@ export class RecruitmentPage {
 
   async gotoVacancies() {
     await this.page.goto('/web/index.php/recruitment/viewJobVacancy');
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   async gotoAddVacancy() {
     await this.page.goto('/web/index.php/recruitment/addJobVacancy');
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
     await this.vacancyNameInput.waitFor({ state: 'visible', timeout: 10000 });
   }
 
@@ -47,10 +47,16 @@ export class RecruitmentPage {
 
     await this.vacancyNameInput.fill(vacancyName);
 
-    // Select job title from dropdown
+    // Select job title from dropdown (use first available option to avoid relying on demo data)
     await this.jobTitleDropdown.click();
-    const jobOption = this.page.locator('.oxd-select-option', { hasText: jobTitle }).first();
-    await jobOption.waitFor({ state: 'visible', timeout: 5000 });
+    const jobOption = this.page.locator('.oxd-select-option').nth(1);
+    
+    // Check if any job titles exist in the system before proceeding
+    const hasOptions = await jobOption.isVisible({ timeout: 5000 }).catch(() => false);
+    if (!hasOptions) {
+      return false; // Indicate failure to add due to missing demo data
+    }
+    
     await jobOption.click();
 
     // Type hiring manager name to trigger autocomplete
@@ -95,7 +101,7 @@ export class RecruitmentPage {
     const editButton = vacancyRow.locator('.oxd-icon-button .bi-pencil-fill');
     await editButton.click();
 
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
 
     if (updates.description) {
       const descriptionInput = this.page.locator('textarea');

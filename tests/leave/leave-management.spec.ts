@@ -33,7 +33,7 @@ test.describe('Leave Management Tests', () => {
         `E2E test leave request - ${Date.now()}`
       );
       if (applied) {
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
       }
     } else {
       // Verify the "No Leave Types with Leave Balance" message is shown
@@ -52,13 +52,13 @@ test.describe('Leave Management Tests', () => {
   test('Cancel a pending leave request', async ({ page }) => {
     // Navigate to My Leave to find and cancel a request
     await leaveManagementPage.gotoMyLeave();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Attempt to cancel the first available leave request
     await leaveManagementPage.cancelLeaveRequest();
 
     // Page should reload/update after cancellation
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test('Check leave entitlements are displayed per leave type', async ({ page }) => {

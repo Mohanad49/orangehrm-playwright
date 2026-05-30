@@ -47,7 +47,7 @@ test.describe('Employee Management Tests', () => {
       lastName: `Employee${searchId}`,
     };
 
-    await employeeListPage.addEmployee(searchEmployee.firstName, searchEmployee.lastName);
+    await employeeListPage.addEmployee(searchEmployee.firstName, searchEmployee.lastName, searchId);
 
     // Now search for the employee
     await employeeListPage.searchEmployee(searchEmployee.firstName);
@@ -66,7 +66,7 @@ test.describe('Employee Management Tests', () => {
       lastName: `Employee${editId}`,
     };
 
-    await employeeListPage.addEmployee(editEmployee.firstName, editEmployee.lastName);
+    await employeeListPage.addEmployee(editEmployee.firstName, editEmployee.lastName, editId);
 
     // Now on the personal details page — edit middle name
     await employeeListPage.editPersonalDetails({
@@ -83,7 +83,7 @@ test.describe('Employee Management Tests', () => {
 
     // Add a new employee
     const countId = Date.now().toString().slice(-6);
-    await employeeListPage.addEmployee(`Count${countId}`, `Employee${countId}`);
+    await employeeListPage.addEmployee(`Count${countId}`, `Employee${countId}`, countId);
 
     // Go back to list and verify count
     await employeeListPage.goto();

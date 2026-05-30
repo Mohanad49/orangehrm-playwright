@@ -31,7 +31,7 @@ export class EmployeeListPage {
 
   async goto() {
     await this.page.goto('/web/index.php/pim/viewEmployeeList');
-    await this.page.waitForLoadState('networkidle');
+    await this.searchButton.waitFor({ state: 'visible' });
   }
 
   async gotoAddEmployee() {
@@ -71,7 +71,7 @@ export class EmployeeListPage {
     }
 
     await this.searchButton.click();
-    await this.page.waitForLoadState('networkidle');
+    await this.recordsCount.waitFor({ state: 'visible' });
 
     // Wait for table to update
     await this.page.waitForTimeout(1000);
