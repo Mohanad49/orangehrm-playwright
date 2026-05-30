@@ -54,6 +54,10 @@ jobs:
           allure_results: allure-results
           allure_history: allure-history
 
+      - name: Fix permissions
+        if: always()
+        run: sudo chown -R $USER:$USER allure-history
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         if: always()
