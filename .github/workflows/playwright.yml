@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+  # Nightly. Flake detection is a function of run count, and a push-only trigger
+  # produces nothing on a week when nobody touches the repo.
+  schedule:
+    - cron: "0 2 * * *"
 
 permissions:
   contents: write
@@ -30,6 +34,16 @@ jobs:
 
       - name: Run tests
         run: npx playwright test
+
+      - name: Upload machine-readable results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: results-json
+          path: |
+            playwright-report.json
+            junit-results.xml
+          retention-days: 30
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
@@ -65,3 +79,48 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
           publish_dir: allure-history
+
+  # Repeat runs of one unchanged commit, on a schedule only.
+  #
+  # This is the input the "same-commit disagreement" flake strategy needs: if the
+  # code did not change and the outcome did, that is close to proof rather than
+  # inference. Three runs of the same SHA give it something to compare.
+  #
+  # Deliberately a separate job from `test` rather than a matrix on it. `test`
+  # publishes the Allure report to gh-pages, and three copies of that job racing
+  # to push to the same branch would fail or clobber each other.
+  repeat:
+    name: Repeat run ${{ matrix.attempt }}
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        attempt: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      # continue-on-error because a failing run is data, not a broken pipeline.
+      # The whole point is to record what happened, and a red X on a scheduled
+      # job trains people to ignore scheduled jobs.
+      - name: Run tests
+        continue-on-error: true
+        run: npx playwright test
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: results-attempt-${{ matrix.attempt }}
+          path: |
+            playwright-report.json
+            junit-results.xml
+            allure-results/
+          retention-days: 30
