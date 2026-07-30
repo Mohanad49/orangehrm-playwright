@@ -1,0 +1,124 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: employees/employee-management.spec.ts >> Employee Management Tests >> Navigate to PIM module
+- Location: tests/employees/employee-management.spec.ts:26:7
+
+# Error details
+
+```
+Test timeout of 30000ms exceeded while running "beforeEach" hook.
+```
+
+```
+Error: page.waitForURL: net::ERR_ABORTED; maybe frame was detached?
+=========================== logs ===========================
+waiting for navigation to "**/dashboard/**" until "load"
+============================================================
+```
+
+# Test source
+
+```ts
+  1  | import { test, expect } from '@playwright/test';
+  2  | import { LoginPage } from '../../pages/LoginPage';
+  3  | import { EmployeeListPage } from '../../pages/EmployeeListPage';
+  4  | 
+  5  | // Generate unique test data to avoid collisions in shared demo environment
+  6  | const uniqueId = Date.now().toString().slice(-6);
+  7  | const testEmployee = {
+  8  |   firstName: `TestFirst${uniqueId}`,
+  9  |   lastName: `TestLast${uniqueId}`,
+  10 |   employeeId: uniqueId,
+  11 | };
+  12 | 
+  13 | test.describe('Employee Management Tests', () => {
+  14 |   let employeeListPage: EmployeeListPage;
+  15 | 
+  16 |   test.beforeEach(async ({ page }) => {
+  17 |     const loginPage = new LoginPage(page);
+  18 |     employeeListPage = new EmployeeListPage(page);
+  19 | 
+  20 |     // Login before each test
+  21 |     await loginPage.goto();
+  22 |     await loginPage.login('Admin', 'admin123');
+> 23 |     await page.waitForURL('**/dashboard/**');
+     |                ^ Error: page.waitForURL: net::ERR_ABORTED; maybe frame was detached?
+  24 |   });
+  25 | 
+  26 |   test('Navigate to PIM module', async ({ page }) => {
+  27 |     await employeeListPage.goto();
+  28 |     await expect(employeeListPage.headerBreadcrumb).toContainText('PIM');
+  29 |   });
+  30 | 
+  31 |   test('Add new employee', async ({ page }) => {
+  32 |     await employeeListPage.addEmployee(
+  33 |       testEmployee.firstName,
+  34 |       testEmployee.lastName,
+  35 |       testEmployee.employeeId
+  36 |     );
+  37 | 
+  38 |     // Should navigate to personal details page after successful add
+  39 |     await expect(page).toHaveURL(/viewPersonalDetails/);
+  40 |   });
+  41 | 
+  42 |   test('Search for employee by name → verify result', async ({ page }) => {
+  43 |     // First add an employee to ensure data exists
+  44 |     const searchId = Date.now().toString().slice(-6);
+  45 |     const searchEmployee = {
+  46 |       firstName: `Search${searchId}`,
+  47 |       lastName: `Employee${searchId}`,
+  48 |     };
+  49 | 
+  50 |     await employeeListPage.addEmployee(searchEmployee.firstName, searchEmployee.lastName, searchId);
+  51 | 
+  52 |     // Now search for the employee
+  53 |     await employeeListPage.searchEmployee(searchEmployee.firstName);
+  54 | 
+  55 |     // Verify there are results in the table
+  56 |     const recordsText = await employeeListPage.getRecordsCount();
+  57 |     // The page should show records found (even if the exact search didn't filter perfectly)
+  58 |     expect(recordsText).toBeTruthy();
+  59 |   });
+  60 | 
+  61 |   test('Edit employee personal details → save → verify update', async ({ page }) => {
+  62 |     // Add an employee to edit
+  63 |     const editId = Date.now().toString().slice(-6);
+  64 |     const editEmployee = {
+  65 |       firstName: `Edit${editId}`,
+  66 |       lastName: `Employee${editId}`,
+  67 |     };
+  68 | 
+  69 |     await employeeListPage.addEmployee(editEmployee.firstName, editEmployee.lastName, editId);
+  70 | 
+  71 |     // Now on the personal details page — edit middle name
+  72 |     await employeeListPage.editPersonalDetails({
+  73 |       middleName: 'MiddleTest',
+  74 |     });
+  75 | 
+  76 |     // Success toast should appear
+  77 |     await expect(employeeListPage.successToast).toBeVisible();
+  78 |   });
+  79 | 
+  80 |   test('Verify employee count increases after addition', async ({ page }) => {
+  81 |     await employeeListPage.goto();
+  82 |     const countBefore = await employeeListPage.getEmployeeCount();
+  83 | 
+  84 |     // Add a new employee
+  85 |     const countId = Date.now().toString().slice(-6);
+  86 |     await employeeListPage.addEmployee(`Count${countId}`, `Employee${countId}`, countId);
+  87 | 
+  88 |     // Go back to list and verify count
+  89 |     await employeeListPage.goto();
+  90 |     const countAfter = await employeeListPage.getEmployeeCount();
+  91 | 
+  92 |     expect(countAfter).toBeGreaterThanOrEqual(countBefore);
+  93 |   });
+  94 | });
+  95 | 
+```
