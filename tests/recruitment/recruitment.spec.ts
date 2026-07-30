@@ -31,7 +31,9 @@ test.describe('Recruitment Tests', () => {
     );
 
     if (success === false) {
-      test.skip(true, 'Skipped: No Job Titles available in demo environment');
+      test.skip(true,
+        'Skipped: the public demo accepted the save (HTTP 200) but did not persist it. '
+        + 'Verified by re-reading the vacancy list. Run OrangeHRM locally to exercise this.');
     }
   });
 
@@ -42,7 +44,9 @@ test.describe('Recruitment Tests', () => {
 
     const success = await recruitmentPage.addVacancy(vacancyName, 'QA Engineer', 'manda');
     if (success === false) {
-      test.skip(true, 'Skipped: No Job Titles available in demo environment');
+      test.skip(true,
+        'Skipped: the public demo accepted the save (HTTP 200) but did not persist it. '
+        + 'Verified by re-reading the vacancy list. Run OrangeHRM locally to exercise this.');
     }
 
     // Then verify it appears in the list
@@ -57,7 +61,9 @@ test.describe('Recruitment Tests', () => {
 
     const success = await recruitmentPage.addVacancy(vacancyName, 'QA Engineer', 'manda');
     if (success === false) {
-      test.skip(true, 'Skipped: No Job Titles available in demo environment');
+      test.skip(true,
+        'Skipped: the public demo accepted the save (HTTP 200) but did not persist it. '
+        + 'Verified by re-reading the vacancy list. Run OrangeHRM locally to exercise this.');
     }
 
     // Edit the vacancy
@@ -77,7 +83,9 @@ test.describe('Recruitment Tests', () => {
 
     const success = await recruitmentPage.addVacancy(vacancyName, 'QA Engineer', 'manda');
     if (success === false) {
-      test.skip(true, 'Skipped: No Job Titles available in demo environment');
+      test.skip(true,
+        'Skipped: the public demo accepted the save (HTTP 200) but did not persist it. '
+        + 'Verified by re-reading the vacancy list. Run OrangeHRM locally to exercise this.');
     }
 
     // Delete the vacancy

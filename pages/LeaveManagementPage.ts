@@ -119,7 +119,7 @@ export class LeaveManagementPage {
   }
 
   async expectSuccessToast() {
-    await expect(this.successToast).toBeVisible({ timeout: 10000 });
+    await expect(this.successToast).toBeVisible();
   }
 
   async getLeaveRequests(): Promise<number> {
@@ -143,6 +143,6 @@ export class LeaveManagementPage {
     const noRecords = this.page.locator('.orangehrm-horizontal-padding', { hasText: 'No Records Found' });
 
     // Either the table should be visible or we get a "no records" message
-    await expect(table.or(noRecords).first()).toBeVisible({ timeout: 10000 });
+    await expect(table.or(noRecords).first()).toBeVisible();
   }
 }

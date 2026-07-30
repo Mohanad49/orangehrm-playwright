@@ -52,7 +52,7 @@ export class EmployeeListPage {
 
     await this.saveButton.click();
     // After successful add, OrangeHRM navigates to the employee's personal details page
-    await this.page.waitForURL('**/viewPersonalDetails/**', { timeout: 15000 });
+    await this.page.waitForURL('**/viewPersonalDetails/**');
   }
 
   async searchEmployee(name: string) {
@@ -92,13 +92,13 @@ export class EmployeeListPage {
     // On the personal details page after adding/navigating to employee
     if (updates.middleName) {
       const middleNameInput = this.page.locator('input[name="middleName"]');
-      await middleNameInput.waitFor({ state: 'visible', timeout: 10000 });
+      await middleNameInput.waitFor({ state: 'visible' });
       await middleNameInput.clear();
       await middleNameInput.fill(updates.middleName);
     }
 
     // Click the first save button (Personal Details section)
     await this.page.locator('form').first().locator('button[type="submit"]').click();
-    await expect(this.successToast).toBeVisible({ timeout: 15000 });
+    await expect(this.successToast).toBeVisible();
   }
 }

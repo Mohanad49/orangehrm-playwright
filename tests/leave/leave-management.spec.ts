@@ -46,7 +46,7 @@ test.describe('Leave Management Tests', () => {
 
     // The My Leave page should load and show the table or search form
     const pageContent = page.locator('.oxd-layout-context');
-    await expect(pageContent).toBeVisible({ timeout: 10000 });
+    await expect(pageContent).toBeVisible();
   });
 
   test('Cancel a pending leave request', async ({ page }) => {

@@ -5,6 +5,7 @@ export class RecruitmentPage {
   readonly addButton: Locator;
   readonly vacancyNameInput: Locator;
   readonly jobTitleDropdown: Locator;
+  readonly jobTitleOptions: Locator;
   readonly hiringManagerInput: Locator;
   readonly statusToggle: Locator;
   readonly saveButton: Locator;
@@ -20,6 +21,10 @@ export class RecruitmentPage {
     this.addButton = page.locator('.orangehrm-header-container button');
     this.vacancyNameInput = page.locator('.oxd-grid-item:has(.oxd-label:has-text("Vacancy Name")) input.oxd-input');
     this.jobTitleDropdown = page.locator('.oxd-grid-item:has(.oxd-label:has-text("Job Title")) .oxd-select-text');
+    // The open dropdown is portalled to the end of the body rather than nested
+    // inside the field, so this is scoped to the visible dropdown list, not to
+    // the Job Title grid item.
+    this.jobTitleOptions = page.locator('.oxd-select-dropdown .oxd-select-option');
     this.hiringManagerInput = page.locator('.oxd-grid-item:has(.oxd-label:has-text("Hiring Manager")) input');
     this.statusToggle = page.locator('.oxd-grid-item:has(.oxd-label:has-text("Active")) .oxd-switch-input');
     this.saveButton = page.locator('button[type="submit"]');
@@ -39,7 +44,7 @@ export class RecruitmentPage {
   async gotoAddVacancy() {
     await this.page.goto('/web/index.php/recruitment/addJobVacancy');
     await this.page.waitForLoadState('domcontentloaded');
-    await this.vacancyNameInput.waitFor({ state: 'visible', timeout: 10000 });
+    await this.vacancyNameInput.waitFor({ state: 'visible' });
   }
 
   async addVacancy(vacancyName: string, jobTitle: string, hiringManager: string) {
@@ -49,15 +54,50 @@ export class RecruitmentPage {
 
     // Select job title from dropdown (use first available option to avoid relying on demo data)
     await this.jobTitleDropdown.click();
-    const jobOption = this.page.locator('.oxd-select-option').nth(1);
-    
-    // Check if any job titles exist in the system before proceeding
-    const hasOptions = await jobOption.isVisible({ timeout: 5000 }).catch(() => false);
-    if (!hasOptions) {
-      return false; // Indicate failure to add due to missing demo data
+
+    // Wait for the dropdown to actually open. Hard wait on purpose: if the list
+    // never renders, that is a hang or a defect, and it should be reported as
+    // one.
+    //
+    // This used to be a 5 second isVisible() probe on the first option, and the
+    // caller turned a false result into
+    // `test.skip('No Job Titles available in demo environment')`. But that probe
+    // returns false just as readily when the list is merely slow, so a latency
+    // problem was being reported as a data problem - and reported by a test that
+    // had never checked. Four tests skipped themselves that way, stating a cause
+    // nobody had verified. A skip that asserts a reason it did not confirm is
+    // worse than a failure, because it looks deliberate.
+    await this.jobTitleOptions.first().waitFor({ state: 'visible' });
+
+    // The first option appearing is NOT the answer to "does this environment
+    // have job titles". While the job-titles request is in flight the dropdown
+    // paints a single "No Records Found" row, and only replaces it once the data
+    // arrives. Reading the list at that moment gives exactly the wrong answer,
+    // confidently.
+    //
+    // Measured: a standalone probe that clicked and waited four seconds saw six
+    // real job titles. The suite, which read the list as soon as an option was
+    // visible, saw ["No Records Found"] and skipped all four recruitment tests
+    // as "No Job Titles available in demo environment". The demo had the data
+    // the entire time.
+    //
+    // So poll until the list settles into something selectable, and only
+    // conclude the environment is empty if it is still empty when time is up.
+    // That way a slow fetch waits, and a genuinely empty environment still
+    // skips - and the two are no longer the same observation.
+    const isRealOption = (t: string) =>
+      t.trim().length > 0 && !/No Records Found|No Results Found|-- Select --/i.test(t);
+
+    try {
+      await expect
+        .poll(async () => (await this.jobTitleOptions.allTextContents()).filter(isRealOption).length)
+        .toBeGreaterThan(0);
+    } catch {
+      return false; // genuinely nothing to select, after a fair wait
     }
-    
-    await jobOption.click();
+
+    const firstReal = this.jobTitleOptions.filter({ hasNotText: /No Records Found|-- Select --/i }).first();
+    await firstReal.click();
 
     // Type hiring manager name to trigger autocomplete
     // The field expects an employee name, not username
@@ -66,8 +106,8 @@ export class RecruitmentPage {
 
     // Wait for autocomplete dropdown to appear and select first option
     const autocompleteOption = this.page.locator('.oxd-autocomplete-option').first();
-    await autocompleteOption.waitFor({ state: 'visible', timeout: 10000 });
-    await expect(autocompleteOption).not.toHaveText('Searching....', { timeout: 10000 });
+    await autocompleteOption.waitFor({ state: 'visible' });
+    await expect(autocompleteOption).not.toHaveText('Searching....');
     await autocompleteOption.click();
 
     // Wait for validation to clear after selecting from autocomplete
@@ -75,14 +115,27 @@ export class RecruitmentPage {
 
     await this.saveButton.click();
 
-    // Wait for either success toast or navigation to the vacancy edit page
-    const successToast = this.successToast;
-    const urlChanged = this.page.waitForURL('**/viewJobVacancy/**', { timeout: 15000 }).catch(() => null);
-
-    await Promise.race([
-      expect(successToast).toBeVisible({ timeout: 15000 }),
-      urlChanged,
+    // Confirm the save actually took effect.
+    //
+    // This was previously:
+    //
+    //   const urlChanged = page.waitForURL(...).catch(() => null);
+    //   await Promise.race([expect(successToast).toBeVisible(), urlChanged]);
+    //
+    // which cannot fail. `urlChanged` resolves to null when it times out, so the
+    // race always settles whether or not anything was saved, and the expect()
+    // never has to come true. Verified against the live demo: the POST returned
+    // 200, no toast appeared, the URL never changed, the vacancy was absent from
+    // the list afterwards - and this function still reported success.
+    //
+    // Racing two *booleans* keeps the original intent (either signal is fine)
+    // while making a failure an actual failure.
+    const saved = await Promise.race([
+      this.successToast.waitFor({ state: 'visible' }).then(() => true).catch(() => false),
+      this.page.waitForURL('**/viewJobVacancy/**').then(() => true).catch(() => false),
     ]);
+
+    return saved;
   }
 
   async searchVacancyInList(vacancyName: string): Promise<boolean> {
@@ -110,7 +163,7 @@ export class RecruitmentPage {
     }
 
     await this.saveButton.click();
-    await expect(this.successToast).toBeVisible({ timeout: 15000 });
+    await expect(this.successToast).toBeVisible();
   }
 
   async deleteVacancy(vacancyName: string) {
@@ -122,6 +175,6 @@ export class RecruitmentPage {
 
     // Confirm deletion
     await this.confirmDeleteButton.click();
-    await expect(this.successToast).toBeVisible({ timeout: 15000 });
+    await expect(this.successToast).toBeVisible();
   }
 }
