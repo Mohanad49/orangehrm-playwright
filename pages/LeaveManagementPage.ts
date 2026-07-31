@@ -11,8 +11,6 @@ export class LeaveManagementPage {
   readonly successToast: Locator;
   readonly leaveListTable: Locator;
   readonly tableRows: Locator;
-  readonly entitlementsLink: Locator;
-  readonly myEntitlementsLink: Locator;
   readonly entitlementTable: Locator;
   readonly headerBreadcrumb: Locator;
   readonly noLeaveBalanceMessage: Locator;
@@ -28,8 +26,6 @@ export class LeaveManagementPage {
     this.successToast = page.locator('.oxd-toast--success');
     this.leaveListTable = page.locator('.oxd-table');
     this.tableRows = page.locator('.oxd-table-body .oxd-table-row');
-    this.entitlementsLink = page.locator('.oxd-topbar-body-nav li', { hasText: 'Entitlements' });
-    this.myEntitlementsLink = page.locator('.oxd-topbar-body-nav a', { hasText: 'My Entitlements' });
     this.entitlementTable = page.locator('.oxd-table');
     this.headerBreadcrumb = page.locator('.oxd-topbar-header-breadcrumb');
     this.noLeaveBalanceMessage = page.locator('p:has-text("No Leave Types with Leave Balance")');
