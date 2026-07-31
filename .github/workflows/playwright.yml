@@ -11,6 +11,19 @@ on:
   schedule:
     - cron: "0 2 * * *"
 
+concurrency:
+  # The test job publishes the Allure report to gh-pages. Two overlapping runs -
+  # a push landing near the nightly cron, or a manual dispatch on top of a push -
+  # both clone gh-pages, both commit, and the loser's push is rejected with
+  # "fetch first". That reports a fully green suite as a failed run, which is
+  # exactly the kind of misleading red this repo is supposed to avoid.
+  #
+  # Queue rather than cancel: every scheduled run is a data point the flake
+  # detection is counting on, so discarding one to save a few minutes is the
+  # wrong trade.
+  group: playwright-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
   pages: write
