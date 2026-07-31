@@ -1,16 +1,33 @@
 # OrangeHRM Playwright Automation
 [![Playwright E2E Tests](https://github.com/Mohanad49/orangehrm-playwright/actions/workflows/playwright.yml/badge.svg)](https://github.com/Mohanad49/orangehrm-playwright/actions/workflows/playwright.yml)
 
-An end-to-end test automation framework built with [Playwright](https://playwright.dev/) and TypeScript, designed to test the [OrangeHRM Open Source Demo](https://opensource-demo.orangehrmlive.com). 
+An end-to-end test automation framework built with [Playwright](https://playwright.dev/) and TypeScript, testing [OrangeHRM](https://www.orangehrm.com/) — run as a container in CI, with the [public demo](https://opensource-demo.orangehrmlive.com) as a zero-setup fallback.
 
 This project serves as a portfolio piece demonstrating how to automate complex enterprise workflows, handle dynamic UI elements, and structure a scalable automation framework using the Page Object Model (POM) design pattern.
+
+Results feed the [TestPulse dashboard](https://testpulse-eight.vercel.app/suites/orangehrm-e2e), which tracks this suite's flakiness over time.
+
+## ▶️ Running the tests
+
+```bash
+npm ci
+npx playwright install --with-deps chromium
+
+./docker/up.sh          # OrangeHRM + MariaDB, installed and seeded (~1 min)
+npx playwright test     # 18/18, about a minute
+```
+
+`up.sh` is what CI runs. Without it the suite falls back to the public demo,
+where several tests cannot pass — that instance accepts writes with `HTTP 200`
+and then discards them. [docker/README.md](docker/README.md) has the full
+account, and is probably the most interesting document in this repository.
 
 ## 🚀 Features
 
 - **Page Object Model (POM)**: Highly maintainable and scalable architecture separating test logic from page interactions.
 - **Enterprise Workflows**: Tests complex business logic including Employee Management, Leave Management, and Recruitment modules.
 - **Dynamic Element Handling**: Robust handling of complex UI components like auto-suggest dropdowns and delayed DOM rendering.
-- **Environment Resiliency**: Employs dynamic data generation and smart assertions to handle the inherent flakiness of shared public demo environments.
+- **Controlled Environment**: The app under test runs in Docker, installed and seeded from scratch on every run. It replaced the public demo after that instance turned out to discard writes silently and serve unrendered `${firstName}` placeholders — which took the suite from 2 of 18 passing to 18 of 18.
 - **Allure Reporting**: Integrated with Allure for comprehensive, visual test execution reports.
 - **TypeScript**: Strictly typed codebase for better tooling, refactoring, and error catching.
 
