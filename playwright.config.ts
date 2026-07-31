@@ -40,7 +40,10 @@ export default defineConfig({
     ['junit', { outputFile: 'junit-results.xml' }],
   ],
   use: {
-    baseURL: 'https://opensource-demo.orangehrmlive.com',
+    // Defaults to the public demo so `npx playwright test` still works with no
+    // setup. CI points this at a containerised OrangeHRM instead - see
+    // docker/README.md for why.
+    baseURL: process.env.ORANGEHRM_BASE_URL ?? 'https://opensource-demo.orangehrmlive.com',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
     trace: 'retain-on-failure',

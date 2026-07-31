@@ -32,8 +32,32 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
+      # Bring up a containerised OrangeHRM and test against that, not against
+      # the public demo.
+      #
+      # The demo was the reason this suite was red. It accepted writes with
+      # HTTP 200 and silently discarded them, its employee autocomplete returned
+      # unrendered "${firstName} ${lastName}" template strings, and one of its
+      # endpoints took 10.9 seconds to answer. None of that is fixable from a
+      # test, and all of it looked like a bug in this repository.
+      #
+      # A container also makes the run deterministic and roughly eight times
+      # faster: the full suite is about a minute here against eight against the
+      # demo, because it is not queueing behind everyone else on the internet.
+      - name: Start and provision OrangeHRM
+        run: ./docker/up.sh http://localhost:8090
+
       - name: Run tests
         run: npx playwright test
+        env:
+          ORANGEHRM_BASE_URL: http://localhost:8090
+          # Not a secret: this instance is created empty and destroyed with the
+          # runner. It is a strong password only because OrangeHRM 5.9 rejects
+          # weak ones and redirects to a password-change screen instead of the
+          # dashboard, which looks exactly like a failed login.
+          ORANGEHRM_PASSWORD: Ohrm@1423
+          # The only employee a fresh install has is the admin.
+          ORANGEHRM_HIRING_MANAGER: OrangeHRM
 
       - name: Upload machine-readable results
         uses: actions/upload-artifact@v4
@@ -130,12 +154,36 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
 
+      # Bring up a containerised OrangeHRM and test against that, not against
+      # the public demo.
+      #
+      # The demo was the reason this suite was red. It accepted writes with
+      # HTTP 200 and silently discarded them, its employee autocomplete returned
+      # unrendered "${firstName} ${lastName}" template strings, and one of its
+      # endpoints took 10.9 seconds to answer. None of that is fixable from a
+      # test, and all of it looked like a bug in this repository.
+      #
+      # A container also makes the run deterministic and roughly eight times
+      # faster: the full suite is about a minute here against eight against the
+      # demo, because it is not queueing behind everyone else on the internet.
+      - name: Start and provision OrangeHRM
+        run: ./docker/up.sh http://localhost:8090
+
       # continue-on-error because a failing run is data, not a broken pipeline.
       # The whole point is to record what happened, and a red X on a scheduled
       # job trains people to ignore scheduled jobs.
       - name: Run tests
         continue-on-error: true
         run: npx playwright test
+        env:
+          ORANGEHRM_BASE_URL: http://localhost:8090
+          # Not a secret: this instance is created empty and destroyed with the
+          # runner. It is a strong password only because OrangeHRM 5.9 rejects
+          # weak ones and redirects to a password-change screen instead of the
+          # dashboard, which looks exactly like a failed login.
+          ORANGEHRM_PASSWORD: Ohrm@1423
+          # The only employee a fresh install has is the admin.
+          ORANGEHRM_HIRING_MANAGER: OrangeHRM
 
       - name: Upload results
         uses: actions/upload-artifact@v4

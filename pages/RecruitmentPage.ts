@@ -130,9 +130,18 @@ export class RecruitmentPage {
     //
     // Racing two *booleans* keeps the original intent (either signal is fine)
     // while making a failure an actual failure.
+    // On a successful save OrangeHRM 5.9 navigates to the new vacancy's own edit
+    // page - /recruitment/addJobVacancy/{id} - not to /viewJobVacancy. The old
+    // pattern only matched the latter, so a save that worked perfectly was read
+    // as a failure. Matching either keeps this working if the redirect changes
+    // back, and the trailing id is what distinguishes "saved" from "still
+    // sitting on the empty form".
     const saved = await Promise.race([
       this.successToast.waitFor({ state: 'visible' }).then(() => true).catch(() => false),
-      this.page.waitForURL('**/viewJobVacancy/**').then(() => true).catch(() => false),
+      this.page
+        .waitForURL(/\/recruitment\/(addJobVacancy\/\d+|viewJobVacancy)/)
+        .then(() => true)
+        .catch(() => false),
     ]);
 
     return saved;
@@ -141,9 +150,17 @@ export class RecruitmentPage {
   async searchVacancyInList(vacancyName: string): Promise<boolean> {
     await this.gotoVacancies();
 
-    // Check if vacancy appears in the table
+    // Wait for the table to actually render before deciding the row is absent.
+    // Probing straight after navigation asked the question while the list was
+    // still empty, so a vacancy that had been created seconds earlier read as
+    // missing - the same "answered before the data arrived" mistake as the job
+    // title dropdown above.
+    const anyRow = this.page.locator('.oxd-table-body .oxd-table-row');
+    const noRecords = this.page.locator('.orangehrm-horizontal-padding', { hasText: /No Records Found/i });
+    await anyRow.first().or(noRecords.first()).waitFor({ state: 'visible' });
+
     const vacancyRow = this.page.locator('.oxd-table-body .oxd-table-row', { hasText: vacancyName });
-    return vacancyRow.isVisible({ timeout: 5000 }).catch(() => false);
+    return vacancyRow.isVisible().catch(() => false);
   }
 
   async editVacancy(vacancyName: string, updates: { description?: string }) {

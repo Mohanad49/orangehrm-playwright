@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { LoginPage } from '../../pages/LoginPage';
 import { LeaveManagementPage } from '../../pages/LeaveManagementPage';
+import { CREDENTIALS } from '../credentials';
 
 test.describe('Leave Management Tests', () => {
   let leaveManagementPage: LeaveManagementPage;
@@ -11,7 +12,7 @@ test.describe('Leave Management Tests', () => {
 
     // Login before each test
     await loginPage.goto();
-    await loginPage.login('Admin', 'admin123');
+    await loginPage.login(CREDENTIALS.username, CREDENTIALS.password);
     await page.waitForURL('**/dashboard/**');
   });
 

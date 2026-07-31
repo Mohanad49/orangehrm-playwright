@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { LoginPage } from '../../pages/LoginPage';
 import { DashboardPage } from '../../pages/DashboardPage';
+import { CREDENTIALS } from '../credentials';
 
 test.describe('Authentication Tests', () => {
   let loginPage: LoginPage;
@@ -13,7 +14,7 @@ test.describe('Authentication Tests', () => {
   });
 
   test('Valid credentials → lands on dashboard', async () => {
-    await loginPage.login('Admin', 'admin123');
+    await loginPage.login(CREDENTIALS.username, CREDENTIALS.password);
     await dashboardPage.expectToBeVisible();
   });
 
@@ -23,19 +24,19 @@ test.describe('Authentication Tests', () => {
   });
 
   test('Empty username → validation message', async ({ page }) => {
-    await loginPage.passwordInput.fill('admin123');
+    await loginPage.passwordInput.fill(CREDENTIALS.password);
     await loginPage.loginButton.click();
     await loginPage.expectRequiredValidation();
   });
 
   test('Empty password → validation message', async ({ page }) => {
-    await loginPage.usernameInput.fill('Admin');
+    await loginPage.usernameInput.fill(CREDENTIALS.username);
     await loginPage.loginButton.click();
     await loginPage.expectRequiredValidation();
   });
 
   test('Successful logout → redirects to login page', async ({ page }) => {
-    await loginPage.login('Admin', 'admin123');
+    await loginPage.login(CREDENTIALS.username, CREDENTIALS.password);
     await dashboardPage.expectToBeVisible();
 
     await dashboardPage.logout();

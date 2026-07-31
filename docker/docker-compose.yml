@@ -1,0 +1,21 @@
+services:
+  db:
+    image: mariadb:10.6
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpw
+      MYSQL_DATABASE: orangehrm
+      MYSQL_USER: orangehrm
+      MYSQL_PASSWORD: orangehrmpw
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  web:
+    image: orangehrm/orangehrm:latest
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8090:80"

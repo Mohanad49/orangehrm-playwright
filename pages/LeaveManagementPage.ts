@@ -51,9 +51,15 @@ export class LeaveManagementPage {
   }
 
   async gotoMyEntitlements() {
-    await this.goto();
-    await this.entitlementsLink.click();
-    await this.myEntitlementsLink.click();
+    // Navigate straight to the view instead of driving the Leave top-bar menu,
+    // matching gotoApplyLeave and gotoMyLeave directly above.
+    //
+    // That menu does not render in this build - `.oxd-topbar-body-nav li`,
+    // `.oxd-topbar-body-nav a` and `.oxd-topbar-body-nav-tab` all match zero
+    // elements on every leave page - so clicking through it could never have
+    // worked. The test spent 30 seconds timing out on a menu item that does not
+    // exist, and reported it as though entitlements were broken.
+    await this.page.goto('/web/index.php/leave/viewMyLeaveEntitlements');
     await this.page.waitForLoadState('domcontentloaded');
   }
 

@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { LoginPage } from '../../pages/LoginPage';
 import { EmployeeListPage } from '../../pages/EmployeeListPage';
+import { CREDENTIALS } from '../credentials';
 
 // Generate unique test data to avoid collisions in shared demo environment
 const uniqueId = Date.now().toString().slice(-6);
@@ -19,7 +20,7 @@ test.describe('Employee Management Tests', () => {
 
     // Login before each test
     await loginPage.goto();
-    await loginPage.login('Admin', 'admin123');
+    await loginPage.login(CREDENTIALS.username, CREDENTIALS.password);
     await page.waitForURL('**/dashboard/**');
   });
 
