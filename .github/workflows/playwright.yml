@@ -31,7 +31,12 @@ permissions:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    # ubuntu-24.04, not ubuntu-latest. On 2026-10-29 ubuntu-latest started
+    # handing out Ubuntu 26.04, and Playwright 1.60 refuses to install there
+    # ("Playwright does not support chromium on ubuntu26.04-x64"), so the
+    # install step failed before a single test ran. Move to 26.04 on purpose,
+    # with a Playwright upgrade, not whenever the alias moves.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -232,7 +237,8 @@ jobs:
   repeat:
     name: Repeat run ${{ matrix.attempt }}
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    # Pinned for the same reason as `test`.
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
