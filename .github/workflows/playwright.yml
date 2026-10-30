@@ -12,7 +12,7 @@ on:
     - cron: "0 2 * * *"
 
 concurrency:
-  # The test job publishes the Allure report to gh-pages. Two overlapping runs -
+  # The report job publishes the Allure report to gh-pages. Two overlapping runs -
   # a push landing near the nightly cron, or a manual dispatch on top of a push -
   # both clone gh-pages, both commit, and the loser's push is rejected with
   # "fetch first". That reports a fully green suite as a failed run, which is
@@ -90,6 +90,15 @@ jobs:
           path: playwright-report/
           retention-days: 30
 
+      # The input for the `report` job below.
+      - name: Upload Allure results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: allure-results
+          path: allure-results/
+          retention-days: 30
+
       # Feed this run into TestPulse, which is what puts this suite on the
       # public dashboard at testpulse-eight.vercel.app.
       #
@@ -113,28 +122,99 @@ jobs:
           dashboard-url: https://testpulse-eight.vercel.app
           comment: "false"
 
+  # Builds the Allure report from the test job's results and publishes it to
+  # gh-pages.
+  #
+  # This used to be the last four steps of `test`, using
+  # simple-elf/allure-report-action. That is a Docker action, and GitHub builds a
+  # Docker action's image while setting up the job, before the first step runs.
+  # The image starts from public.ecr.aws, which rate-limits anonymous pulls, and
+  # on 9 of the 20 nights up to 2026-10-30 the pull got a 429. The job died in
+  # setup: no checkout, no install, no tests, nothing for TestPulse. Then the
+  # deploy step, which ran on always(), published the empty folder over the
+  # live report.
+  #
+  # Now the report cannot stop the tests. It has its own job, the Allure CLI
+  # runs straight on the runner so there is no image to pull, it only deploys a
+  # report it actually generated, and continue-on-error stops a publishing
+  # problem from showing up as a failed test run.
+  report:
+    needs: test
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    steps:
+      - name: Download Allure results
+        uses: actions/download-artifact@v4
+        with:
+          name: allure-results
+          path: allure-results
+
       - name: Get Allure history
         uses: actions/checkout@v4
-        if: always()
         continue-on-error: true
         with:
           ref: gh-pages
           path: gh-pages
 
+      # The same steps the action ran, with the same Allure release, so gh-pages
+      # keeps its layout: a folder per run, the newest 20 kept, last-history
+      # feeding the trend charts, and an index.html that redirects to the latest
+      # run. Java 17 ships with the runner image.
       - name: Generate Allure report
-        uses: simple-elf/allure-report-action@master
-        if: always()
-        with:
-          allure_results: allure-results
-          allure_history: allure-history
+        env:
+          ALLURE_VERSION: "2.44.0"
+          ALLURE_SHA256: "7021a90828c00cd6ec992027cce48e8a94bd87fad43d0c2dcac4795cadc178d7"
+          KEEP_REPORTS: "20"
+        run: |
+          set -euo pipefail
 
-      - name: Fix permissions
-        if: always()
-        run: sudo chown -R $USER:$USER allure-history
+          curl --fail --silent --show-error --location --retry 5 --retry-all-errors \
+            --output "$RUNNER_TEMP/allure.tgz" \
+            "https://repo.maven.apache.org/maven2/io/qameta/allure/allure-commandline/$ALLURE_VERSION/allure-commandline-$ALLURE_VERSION.tgz"
+          echo "$ALLURE_SHA256  $RUNNER_TEMP/allure.tgz" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/allure.tgz" -C "$RUNNER_TEMP"
+          allure="$RUNNER_TEMP/allure-$ALLURE_VERSION/bin/allure"
+
+          pages_url="https://$GITHUB_REPOSITORY_OWNER.github.io/${GITHUB_REPOSITORY#*/}"
+          run="$GITHUB_RUN_NUMBER"
+
+          mkdir -p gh-pages allure-history
+          cp -r gh-pages/. allure-history
+          rm -rf allure-history/.git allure-history/last-history
+
+          # Make room for this run by keeping only the newest KEEP_REPORTS - 1.
+          for dir in allure-history/*/; do
+            name="$(basename "$dir")"
+            if [[ "$name" =~ ^[0-9]+$ ]]; then echo "$name"; fi
+          done | sort -rn | tail -n +"$KEEP_REPORTS" | while read -r old; do
+            rm -rf "allure-history/$old"
+          done
+
+          if [ -d gh-pages/last-history ]; then
+            mkdir -p allure-results/history
+            cp -r gh-pages/last-history/. allure-results/history
+          fi
+
+          cat > allure-results/executor.json <<EOF
+          {"name": "GitHub Actions", "type": "github", "reportName": "Allure Report with history",
+           "url": "$pages_url", "reportUrl": "$pages_url/$run",
+           "buildUrl": "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID",
+           "buildName": "GitHub Actions Run #$GITHUB_RUN_ID", "buildOrder": "$run"}
+          EOF
+
+          "$allure" generate --clean allure-results -o allure-report
+
+          cp -r allure-report/. "allure-history/$run"
+          cp -r allure-report/history allure-history/last-history
+          printf '%s\n' \
+            '<!DOCTYPE html><meta charset="utf-8">' \
+            "<meta http-equiv=\"refresh\" content=\"0; URL=$pages_url/$run/index.html\">" \
+            '<meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">' \
+            > allure-history/index.html
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
-        if: always()
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
@@ -146,9 +226,9 @@ jobs:
   # code did not change and the outcome did, that is close to proof rather than
   # inference. Three runs of the same SHA give it something to compare.
   #
-  # Deliberately a separate job from `test` rather than a matrix on it. `test`
-  # publishes the Allure report to gh-pages, and three copies of that job racing
-  # to push to the same branch would fail or clobber each other.
+  # Deliberately a separate job from `test` rather than a matrix on it. The
+  # Allure report on gh-pages is built from `test`'s results, and three copies
+  # of that job would mean three reports racing to push to the same branch.
   repeat:
     name: Repeat run ${{ matrix.attempt }}
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
